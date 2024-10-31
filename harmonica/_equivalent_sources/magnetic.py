@@ -15,7 +15,7 @@ from .. import magnetic_angles_to_vec
 from numba import jit
 from sklearn.utils.validation import check_is_fitted
 
-class EquivalentSourcesMagnetic():
+class EquivalentSourcesTotalFieldAnomaly():
     """
     """
     def __init__(
@@ -50,12 +50,12 @@ class EquivalentSourcesMagnetic():
     
     def fit(
         self,
-        tfa=None,
-        be=None,
-        bn=None,
-        bu=None,
+        coordinates,
+        data,
+        inclination,
+        declination,
+        weights=None,
     ):
-        coordinates, data, weights, inclination, declination = tfa
         coordinates, data, weights = vdb.check_fit_input(coordinates, data, weights)
         # Capture the data region to use as a default when gridding.
         self.region_ = vd.get_region(coordinates[:2])
@@ -72,7 +72,9 @@ class EquivalentSourcesMagnetic():
         dipole_moment_direction = magnetic_angles_to_vec(
             1, self.dipole_inclination, self.dipole_declination,
         )
+        dipole_moment_direction = _field_direction_as_array(dipole_moment_direction, data.size)
         field_direction = magnetic_angles_to_vec(1, inclination, declination)
+        field_direction = _field_direction_as_array(field_direction, data.size)
         jacobian = self.jacobian_tfa(
             coordinates, self.dipole_coordinates_, dipole_moment_direction, field_direction,
         )
@@ -105,4 +107,37 @@ class EquivalentSourcesMagnetic():
     def jacobian(
         self, coordinates, dipole_coordinates, dipole_moment_direction, field_direction,
     ):
-        
+        """
+        """
+        n = len(coordinates[0])
+        m = len(dipole_coordinates[0])
+        A = np.empty((n, m))
+        _jacobian_fast(
+            easting=coordinates[0],
+            northing=coordinates[1],
+            upward=coordinates[2],
+            d_easting=dipole_coordinates[0],
+            d_northing=dipole_coordinates[1],
+            d_upward=dipole_coordinates[2],
+            m_easting=dipole_moment_direction[0],
+            m_northing=dipole_moment_direction[1],
+            m_upward=dipole_moment_direction[2],
+            f_easting=field_direction[0],
+            f_northing=field_direction[1],
+            f_upward=field_direction[2],
+            jacobian=A,
+        )
+        return A
+    
+def _field_direction_as_array(field_direction, size):
+    ""
+    ""
+    if isinstance(field_direction[0], np.ndarray):
+        if field_direction[0].size != size:
+            raise ValueError(
+                "Inclination and declination must have the same size as the data "
+                f"({size}) or be a float"
+            )
+        return field_direction
+    field_direction = tuple(np.full(size, c) for c in field_direction)
+    return field_direction
