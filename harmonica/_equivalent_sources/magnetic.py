@@ -84,7 +84,7 @@ class EquivalentSourcesTotalFieldAnomaly:
         )
         field_direction = magnetic_angles_to_vec(1, inclination, declination)
         field_direction = _field_direction_as_array(field_direction, data.size)
-        jacobian = self.jacobian_tfa(
+        jacobian = self.jacobian(
             coordinates,
             self.dipole_coordinates_,
             dipole_moment_direction,
