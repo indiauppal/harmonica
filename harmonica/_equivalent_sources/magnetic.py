@@ -20,7 +20,43 @@ TESLA_TO_NANOTESLA = 1e9
 
 
 class EquivalentSourcesTotalFieldAnomaly:
-    """ """
+    """
+    Equivalent sources for magnetic fields.
+    
+    These equivalent sources can be used for:
+    * Cartesian coordinates (geographic coordinates must be project before use)
+    * Magnetic data (including derivatives)
+    * Interpolation
+    * Upward continuation
+    
+    Parameters
+    ----------
+    damping :
+    
+    depth :
+    
+    dipole_coordinates :
+    
+    dipole_inclination :
+    
+    dipole_declination :
+    
+    block_size :
+    
+    parellel :
+    
+    dtype :
+    
+    
+    Attributes
+    ----------
+    region_ :
+    depth_ : float or None
+    dipole_coordinates_ :
+    dipole_moments_ :
+    
+    
+    """
 
     def __init__(
         self,
