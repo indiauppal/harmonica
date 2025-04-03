@@ -13,6 +13,7 @@ import numpy as np
 import verde as vd
 import verde.base as vdb
 from sklearn.utils.validation import check_is_fitted
+import time
 
 from .. import dipole_magnetic, magnetic_angles_to_vec, total_field_anomaly
 
@@ -60,7 +61,7 @@ class EquivalentSourcesTotalFieldAnomaly:
 
     def __init__(
         self,
-        damping=None,
+        damping=1e-5,
         depth: float | str = "default",
         dipole_coordinates=None,
         dipole_inclination=90,
@@ -126,7 +127,10 @@ class EquivalentSourcesTotalFieldAnomaly:
             dipole_moment_direction,
             field_direction,
         )
+        start = time.perf_counter() # Do something you want to time
         moment_amplitude = vdb.least_squares(jacobian, data, weights, self.damping)
+        end = time.perf_counter()
+        print(f"{end - start:2e}s")
         self.dipole_moments_ = magnetic_angles_to_vec(
             moment_amplitude,
             self.dipole_inclination,
