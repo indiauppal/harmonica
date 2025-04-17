@@ -43,7 +43,7 @@ def grid_coords(region, shape):
 
 @pytest.fixture
 def scatter_coords(region, shape):
-    scatter_coords = vd.scatter_points(region=region, size=(shape[0]*shape[1]), extra_coords=500)
+    scatter_coords = vd.scatter_points(region=region, size=(shape[0]*shape[1]), extra_coords=500, random_state=0)
     return scatter_coords
     
 @pytest.fixture
@@ -71,21 +71,44 @@ def forward_tfa(coords, dipole_coords, dipole_moments, inc, dec):
     tfa = hm.total_field_anomaly([be, bn, bu], inc, dec)
     return tfa
     
-def test_on_regular_grid(grid_tfa, grid_coords, inc_dec):
+def test_on_regular_grid(grid_coords, inc_dec, dipoles):
+    dipole_coords, dipole_moments = dipoles
+    inc, dec = inc_dec
+    eqs = hm.EquivalentSourcesTotalFieldAnomaly()
+    true_tfa = forward_tfa(grid_coords, dipole_coords, dipole_moments, inc, dec)
+    eqs.fit(grid_coords, true_tfa, inc, dec)
+    tfa_predict = eqs.predict(grid_coords, inc, dec)
+    atol = vd.maxabs(true_tfa) / 1e3
+    np.testing.assert_allclose(true_tfa, tfa_predict, atol=atol)
+    
+def test_on_noisy_regular_grid(grid_tfa, grid_coords, inc_dec, dipoles):
+    dipole_coords, dipole_moments = dipoles
     inc, dec = inc_dec
     eqs = hm.EquivalentSourcesTotalFieldAnomaly()
     eqs.fit(grid_coords, grid_tfa, inc, dec)
     tfa_predict = eqs.predict(grid_coords, inc, dec)
-    atol = vd.maxabs(grid_tfa) / 1e2
-    np.testing.assert_allclose(grid_tfa, tfa_predict, atol=atol)
+    rmse = np.sqrt(np.nanmean((grid_tfa - tfa_predict)**2))
+    tol = vd.maxabs(grid_tfa) / 1e3
+    assert rmse <= tol
 
-def test_on_scatter_grid(scatter_tfa, scatter_coords, inc_dec):
+def test_on_scatter_grid(scatter_coords, dipoles, inc_dec):
+    dipole_coords, dipole_moments = dipoles
+    inc, dec = inc_dec
+    tfa_true = forward_tfa(scatter_coords, dipole_coords, dipole_moments, inc, dec)
+    eqs = hm.EquivalentSourcesTotalFieldAnomaly()
+    eqs.fit(scatter_coords, tfa_true, inc, dec)
+    tfa_predict = eqs.predict(scatter_coords, inc, dec)
+    atol = vd.maxabs(tfa_true) / 1e3
+    np.testing.assert_allclose(tfa_true, tfa_predict, atol=atol)
+
+def test_on_noisy_scatter_grid(scatter_tfa, scatter_coords, inc_dec):
     inc, dec = inc_dec
     eqs = hm.EquivalentSourcesTotalFieldAnomaly()
     eqs.fit(scatter_coords, scatter_tfa, inc, dec)
     tfa_predict = eqs.predict(scatter_coords, inc, dec)
-    atol = vd.maxabs(scatter_tfa) / 1e2
-    np.testing.assert_allclose(scatter_tfa, tfa_predict, atol=atol)
+    rmse = np.sqrt(np.nanmean((scatter_tfa - tfa_predict)**2))
+    tol = vd.maxabs(scatter_tfa) / 1e3
+    assert rmse <= tol
 
 def test_fit_grid_predict_scatter(grid_tfa, grid_coords, scatter_coords, dipoles, inc_dec):
     dipole_coords, dipole_moments = dipoles
